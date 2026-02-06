@@ -1,0 +1,9 @@
+services:
+  communityos-discord-bot:
+    build: .
+    container_name: communityos-discord-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

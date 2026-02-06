@@ -1,0 +1,40 @@
+{
+  "name": "@community-os/discord-bot",
+  "version": "0.3.0",
+  "description": "CommunityOS Discord Bot - AI-native company operations with KB integration, agent system, and comprehensive commands",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0",
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "register": "node src/register-commands.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop community-os-bot",
+    "pm2:restart": "pm2 restart community-os-bot",
+    "pm2:logs": "pm2 logs community-os-bot",
+    "pm2:status": "pm2 status",
+    "deploy": "bash deploy.sh"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "communityos",
+    "ai-agents",
+    "knowledge-base",
+    "automation"
+  ],
+  "author": "CommunityOS",
+  "license": "ISC",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "pm2": "^5.4.3"
+  }
+}
