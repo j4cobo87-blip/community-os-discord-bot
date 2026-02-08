@@ -114,6 +114,23 @@ import {
   resetConfig as resetChatbotConfig,
 } from './config/chatbot-config.js';
 
+// Import extended handlers for games, interactions, and Paco Hub
+import {
+  handleExtendedCommand,
+  handleExtendedButton,
+  shouldProcessAsGameMessage,
+  processGameMessage,
+  trackUserActivity,
+} from './handlers/index.js';
+
+// Import interaction handlers
+import {
+  handleQuickActionButton,
+  handleSelectMenu,
+  handleModalSubmit,
+  handleContextMenu,
+} from './modules/interactions.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -357,11 +374,31 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (!message.guild) return;
 
+  // Track message for profile stats (sample 10% to reduce load)
+  if (Math.random() < 0.1) {
+    try {
+      await trackUserActivity(message.author.id, 'message');
+    } catch {
+      // Ignore tracking errors
+    }
+  }
+
   // Check moderation first
   const modResult = await handleModeration(message);
   if (modResult) {
     // Message was moderated, stop processing
     return;
+  }
+
+  // Check if this is a game input (word scramble, hangman, number guess, quiz)
+  const channelId = message.channel.id;
+  if (shouldProcessAsGameMessage(channelId)) {
+    try {
+      const wasGameMessage = await processGameMessage(message);
+      if (wasGameMessage) return;
+    } catch (err) {
+      console.error('Game message processing error:', err.message);
+    }
   }
 
   // Check for auto-response triggers (KB search, !paco commands)
@@ -438,9 +475,99 @@ client.on('messageCreate', async (message) => {
 
 // ─── Slash commands ────────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
+  // Handle button interactions
+  if (interaction.isButton()) {
+    try {
+      // Handle extended button interactions (games, etc.)
+      const handledExtended = await handleExtendedButton(interaction);
+      if (handledExtended) return;
+
+      // Handle quick action buttons
+      if (interaction.customId.startsWith('quick_') ||
+          interaction.customId.startsWith('support_') ||
+          interaction.customId.startsWith('welcome_') ||
+          interaction.customId.startsWith('poll_') ||
+          interaction.customId.startsWith('confirm_') ||
+          interaction.customId.startsWith('page_')) {
+        await handleQuickActionButton(interaction);
+        return;
+      }
+    } catch (err) {
+      console.error('Button interaction error:', err.message);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'An error occurred.', ephemeral: true }).catch(() => {});
+      }
+    }
+    return;
+  }
+
+  // Handle select menu interactions
+  if (interaction.isStringSelectMenu()) {
+    try {
+      await handleSelectMenu(interaction);
+    } catch (err) {
+      console.error('Select menu error:', err.message);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'An error occurred.', ephemeral: true }).catch(() => {});
+      }
+    }
+    return;
+  }
+
+  // Handle modal submissions
+  if (interaction.isModalSubmit()) {
+    try {
+      await handleModalSubmit(interaction);
+    } catch (err) {
+      console.error('Modal submit error:', err.message);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'An error occurred.', ephemeral: true }).catch(() => {});
+      }
+    }
+    return;
+  }
+
+  // Handle context menu commands
+  if (interaction.isContextMenuCommand()) {
+    try {
+      await handleContextMenu(interaction);
+    } catch (err) {
+      console.error('Context menu error:', err.message);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: 'An error occurred.', ephemeral: true }).catch(() => {});
+      }
+    }
+    return;
+  }
+
+  // Handle autocomplete
+  if (interaction.isAutocomplete()) {
+    // Handle command autocomplete if needed
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName, guild } = interaction;
+
+  // Track command usage for profile stats
+  try {
+    await trackUserActivity(interaction.user.id, 'command');
+  } catch {
+    // Ignore tracking errors
+  }
+
+  // Try extended commands first (games, admin, etc.)
+  try {
+    const handledExtended = await handleExtendedCommand(interaction);
+    if (handledExtended) return;
+  } catch (err) {
+    console.error('Extended command error:', err.message);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: `Error: ${err.message}`, ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
 
   // ─── Admin Rate Limiting Check ─────────────────────────────────
   if (ADMIN_COMMANDS.includes(commandName)) {

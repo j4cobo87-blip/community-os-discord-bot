@@ -1,120 +1,224 @@
-# Community-OS Discord Bot
+# CommunityOS Discord Bot
 
-Minimal Discord bot for the Community-OS project. Posts updates to dedicated channels and provides health checks.
+**AI-Native Discord Bot for Company Operations**
+
+A comprehensive Discord bot for the CommunityOS ecosystem, featuring KB integration, multi-agent chat, automated moderation, role management, and deep integration with Paco Hub.
+
+---
+
+## Quick Stats
+
+| Metric | Value |
+|--------|-------|
+| **Commands** | 30+ slash commands |
+| **Modules** | 12 feature modules |
+| **AI Integrations** | Anthropic, OpenRouter |
+| **KB Documents** | 100+ searchable docs |
+| **Agents** | 96 AI agents accessible |
+
+---
 
 ## Architecture
 
 ```
 src/
-  index.js              — Main bot: login, event handlers, channel posting
-  commands.js           — Slash command definitions (ping, ship, swarm)
-  register-commands.js  — One-time command registration with Discord API
+├── index.js              — Main bot: login, event handlers, command routing
+├── commands.js           — Slash command definitions
+├── register-commands.js  — One-time command registration
+├── config/
+│   └── constants.js      — Colors, links, API endpoints
+├── modules/
+│   ├── roles.js          — Role management and org hierarchy
+│   ├── channels.js       — Channel setup and organization
+│   ├── welcome.js        — Member join/leave handling
+│   ├── autoResponse.js   — KB search, agent chat, auto-replies
+│   ├── moderation.js     — Raid protection, moderation tools
+│   └── integration.js    — Paco Hub API integration
+├── services/
+│   ├── kb-service.js     — Knowledge base operations
+│   ├── agent-service.js  — AI agent communication
+│   └── chatbot-service.js — Conversational AI
+└── data/                 — Persistent data (mounted volume)
 ```
 
-**Stack:** Node.js 20 + discord.js v14 + dotenv
-**Ports:** None (outbound WebSocket to Discord gateway only)
-**Persistence:** `./data/` directory (mounted as volume in Docker)
+**Stack:** Node.js 20+ | discord.js v14 | dotenv
+**AI:** Anthropic Claude | OpenRouter
+**Integration:** Paco Hub API (port 3010)
 
-## Bot Commands
+---
 
-| Command | What it does | Target channel |
-|---------|-------------|----------------|
-| `/ping` | Health check (ephemeral reply: "pong") | — |
-| `/ship text:<msg>` | Posts update with ship emoji | `#ship-log` |
-| `/swarm text:<msg>` | Posts update with robot emoji | `#build-swarm` |
+## Features
 
-On startup, the bot posts "Community-OS bot is online" to the `#status` channel.
+### Knowledge Base Integration
+- `/kb search <query>` - Search the knowledge base
+- `/kb doc <id>` - Get specific document
+- `/kb list [section]` - List documents by section
+- `/kb sections` - Show all KB sections
+- `/kb random` - Get a random document
+- `/kb ask <question>` - AI-powered KB Q&A
+- `/kb stats` - Knowledge base statistics
+
+### AI Agent System
+- `/agent list` - List all 96 AI agents
+- `/agent info <id>` - Get agent details
+- `/agent chat <id> <message>` - Chat with an agent
+- `/agent task <id> <task>` - Assign task to agent
+- `/agent status` - Get agent system status
+- `/agent summon <id>` - Summon agent to channel
+- `/agents teams` - List all teams
+- `/agents sections` - List all sections
+
+### Server Management
+- `/setup org` - Initialize org structure (roles + channels)
+- `/setup roles` - Create org role hierarchy
+- `/setup channels` - Create team channels
+- `/role assign <user> <role>` - Assign role to user
+- `/role stats` - Role distribution statistics
+- `/channel create <name>` - Create team channel
+
+### Utility Commands
+- `/ping` - Health check
+- `/status` - Bot and system status
+- `/ship <message>` - Post to #ship-log
+- `/swarm <message>` - Post to #build-swarm
+- `/ticket <title> <description>` - Create support ticket
+
+### Automated Features
+- **Auto KB Search** - Responds to questions with KB results
+- **Agent Chat** - Conversational AI in designated channels
+- **Welcome Messages** - Custom onboarding for new members
+- **Raid Protection** - Automatic detection and mitigation
+- **Moderation Tools** - Content filtering and warnings
+
+---
 
 ## Setup
 
 ### Prerequisites
 
 - Node.js >= 20
-- A Discord bot token from the [Discord Developer Portal](https://discord.com/developers/applications)
-- The bot must be invited to your server with `bot` + `applications.commands` scopes
-
-> **STILL NEEDED:** Paste the bot token into `.env` — see step 2 below.
+- Discord bot token from [Discord Developer Portal](https://discord.com/developers/applications)
+- Bot invited with `bot` + `applications.commands` scopes
+- (Optional) Anthropic API key for AI features
+- (Optional) OpenRouter API key for model variety
 
 ### 1. Install dependencies
 
 ```bash
-cd DISCORD_BOTS/community-os-bot
+cd ~/.openclaw/workspace/DISCORD_BOTS/community-os-bot
 npm install
 ```
 
-### 2. Configure `.env`
-
-A `.env` file already exists with everything except the token:
+### 2. Configure environment
 
 ```bash
-# Edit .env and paste your DISCORD_TOKEN
+# Copy example and edit
+cp .env.example .env
 nano .env
 ```
 
-The App ID and Guild ID are pre-filled. Only `DISCORD_TOKEN` needs to be added.
+**Required:**
+```env
+DISCORD_TOKEN=your_bot_token_here
+DISCORD_APP_ID=1468614925659144205
+DISCORD_GUILD_ID=1468607965123575889
+```
 
-**Where to get the token:**
-1. Go to https://discord.com/developers/applications
-2. Select the Community-OS bot application (App ID: `1468614925659144205`)
-3. Navigate to "Bot" in the sidebar
-4. Click "Reset Token" and copy it
-5. Paste into `.env` as `DISCORD_TOKEN=your_token_here`
+**Optional (for AI features):**
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+OPENROUTER_API_KEY=sk-or-...
+PACO_HUB_URL=http://localhost:3010
+```
 
-### 3. Register slash commands (one time)
+### 3. Register commands
 
 ```bash
 npm run register
 ```
 
-This registers `/ping`, `/ship`, `/swarm` as guild-only commands. Re-run if you change `commands.js`.
-
-### 4a. Run locally
+### 4. Run the bot
 
 ```bash
-npm start          # production
-npm run dev        # dev mode with auto-reload (--watch)
+# Production
+npm start
+
+# Development (auto-reload)
+npm run dev
+
+# With PM2 (recommended for production)
+npm run pm2:start
+npm run pm2:logs
 ```
 
-### 4b. Run with Docker
+---
+
+## Process Management (PM2)
+
+```bash
+npm run pm2:start    # Start with PM2
+npm run pm2:stop     # Stop bot
+npm run pm2:restart  # Restart bot
+npm run pm2:logs     # View logs
+npm run pm2:status   # Check status
+```
+
+---
+
+## Docker Deployment
 
 ```bash
 docker compose up -d --build
-docker compose logs -f          # watch logs
-docker compose down             # stop
+docker compose logs -f
+docker compose down
 ```
 
-## Discord Server Setup
+---
 
-The bot expects these text channels to exist in the server:
+## Channel Structure
 
-| Channel | Purpose | Env override |
-|---------|---------|-------------|
-| `#status` | Bot online/offline announcements | `STATUS_CHANNEL_NAME` |
-| `#ship-log` | Ship updates from `/ship` | `SHIP_LOG_CHANNEL_NAME` |
-| `#build-swarm` | Swarm updates from `/swarm` | `BUILD_SWARM_CHANNEL_NAME` |
+The bot expects/creates these channels:
 
-> **STILL NEEDED:** Verify these channels exist in the Discord server (Guild ID: `1468607965123575889`).
+| Channel | Purpose |
+|---------|---------|
+| `#status` | Bot announcements |
+| `#ship-log` | Shipping updates |
+| `#build-swarm` | Development updates |
+| `#kb-search` | Knowledge base queries |
+| `#agent-chat` | AI agent conversations |
+| `#support` | Support tickets |
 
-## Channel name overrides
-
-Edit `.env` to use different channel names:
-```
-STATUS_CHANNEL_NAME=bot-status
-SHIP_LOG_CHANNEL_NAME=shipping
-BUILD_SWARM_CHANNEL_NAME=swarm-chat
-```
+---
 
 ## Security
 
-- Never paste bot tokens into chat or commit them to git
-- `.env` is in `.gitignore` — only `.env.example` is tracked
-- Rotate the token immediately if it ever leaks (Discord Developer Portal > Bot > Reset Token)
+- Never commit tokens to git
+- `.env` is in `.gitignore`
+- Rotate tokens if leaked (Developer Portal > Bot > Reset Token)
+- Use environment variables for all secrets
+
+---
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| "Missing DISCORD_TOKEN" | Paste token into `.env` |
-| Commands not showing in Discord | Run `npm run register` |
-| "I can't find #ship-log" | Create the channel in Discord, or change `SHIP_LOG_CHANNEL_NAME` in `.env` |
-| Bot appears offline | Check `docker compose logs` or run `npm start` and look for errors |
+| "Missing DISCORD_TOKEN" | Add token to `.env` |
+| Commands not showing | Run `npm run register` |
+| Channel not found | Create channel or update `.env` |
+| Bot offline | Check `pm2 logs` or run `npm start` |
+| AI not responding | Verify API keys in `.env` |
+
+---
+
+## Related Projects
+
+| Project | Path | Port |
+|---------|------|------|
+| Paco Hub | `~/Desktop/PACO_HUB/paco-hub-app/` | 3010 |
+| CommunityOS | `~/Desktop/AI PROPERT MNG PRJECT/` | 3002, 4001 |
+| Control Center | `~/Desktop/CONTROL_CENTER/` | - |
+
+---
+
+**Version**: 0.3.0 | **Last Updated**: 2026-02-07
